@@ -22,7 +22,6 @@ import signal
 # Check for pexepct
 try:
     import pexpect
-    import pxssh
 except ImportError:
     sys.stderr.write("You do not have 'pexpect' installed.\n")
     sys.stderr.write("Use `pip install pexpect` to install.\n")
@@ -82,7 +81,11 @@ def seekRouters(choice):
             new = newSecret()
         print ('\n')
         
-        while( addr  != "" ):
+        while 1:
+            if addr == "\n":
+                continue
+            if addr == "":
+                break
             # Make the connection to router at IP addr
             child = connect(addr, user, pw, sec)
             # Verify a successful connection has been made to this router
@@ -94,11 +97,15 @@ def seekRouters(choice):
                 elif choice == '2':
                     healthCheck(child)    
                 elif choice == '3':
-                    systemAudit(child)
+                    systemAudit(addr, child)
             addr = f.readline()    
     else:
         print('Entering manual mode.\n')
-        while( addr != "" ):
+        while 1:
+            if addr == '\n':
+                continue
+            elif addr == '':
+                break    
             # Manual input required for each IP address in file
             print('Enter login information for router', line)
             user, pw, sec= setLoginInfo()
@@ -114,7 +121,7 @@ def seekRouters(choice):
                 elif choice == '2':
                     healthCheck(child)    
                 elif choice == '3':
-                    systemAudit(child)
+                    systemAudit(addr, child)
             addr = f.readline()
     
     f.seek(0, 0) # Reset position of pointer to the beginning of the file
@@ -130,6 +137,7 @@ def setLoginInfo():
 # Sets and returns the new secret desired by the user
 def newSecret():
     while 1:
+        # Enter new secret and confirm it
         new = getpass.getpass('New Secret: ')
         confirm = getpass.getpass('Confirm New Secret: ')
         if new != confirm:
@@ -144,17 +152,18 @@ def newSecret():
 # information.  Returns child, being the remote login process 
 # opened by pexpect.
 def connect(addr, user, pw, sec):
-    print('\nAttempting to connect to router', addr)
+    print("\nAttempting to connect to router" ,addr)
     # Make ssh process using the current router address
     try:
-        child = pexpect.spawnu('ssh %s@%s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' % (user,addr))
+        child = pexpect.spawn('ssh %s@%s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' % (user,addr))
         child.timeout = 4
     except:
         print('Could not reach host', addr)
+        return -1
     
     # Password entry attempt
     try:
-        child.expect(unicode('password: '))
+        child.expect('password: ')
         child.sendline(pw)
     except:
         print('Could not connect to host', addr)
@@ -162,7 +171,7 @@ def connect(addr, user, pw, sec):
             child.close()
         return -1
     try:
-        child.expect(unicode('>'))
+        child.expect('>')
     except:
         print('Incorrect login.\n\n')
         if child.isalive():
@@ -171,10 +180,10 @@ def connect(addr, user, pw, sec):
     
     # Enable secret attempt
     child.sendline('enable')
-    child.expect(unicode('Password: '))
+    child.expect('Password: ')
     child.sendline(sec)
     try:
-        child.expect(unicode('#'))
+        child.expect('#')
     except:
         print('Incorrect enable password\n\n')
         if child.isalive():
@@ -190,9 +199,9 @@ def connect(addr, user, pw, sec):
 # privelaged  mode in order to change the secret to the new one.
 def secretChange(new, child):
     child.sendline('conf t')
-    child.expect(unicode('#'))
-    child.sendline(unicode('enable secret %s' % new))
-    child.expect(unicode('#'))
+    child.expect('#')
+    child.sendline('enable secret %s' % new)
+    child.expect('#')
     print('Password changed successfully.\n\n')
     # Work is done, close the child
     if child.isalive():
@@ -203,14 +212,51 @@ def secretChange(new, child):
 # Checks the health of the cisco network using ping, connectivity of
 # neighbors, and the interface status. 
 def healthCheck(child):
+    # Layer 1 Validation, show only connected interface status
+    child.sendline('show interfaces status | exclude notconnect')
+    child.readline() # Read through command
+    child.readline() # Read through newline
+    results = child.readline() # Read first line
+    while 1:
+        try:
+            results += child.readline() # Append the next line
+        except:
+            break # Read until prompt
+    # Print results
+    print(('Interface Status:\n' + results.decode('utf-8')))
+    # Layer 2 Validation
+    child.sendline('show arp')
+    child.readline() # Read through the command 
+    results = child.readline()
+    while 1:
+        try:
+            results += child.readline()
+        except:
+            break
+    print(('ARP Table:\n' + results.decode('utf-8')))
     
+    # Layer 3 Validation
+    
+
     if child.isalive():
         child.close()
 
 
 ## System Audit
 # Checks the version information of the router's software.
-def systemAudit(child):
+def systemAudit(addr, child):
+    
+    # Get hostname
+    child.sendline('show run | include hostname')
+    child.expect('hostname ')
+    hostname = child.readline()
+    
+    # Show Version, first line
+    child.sendline('show version')
+    ver = child.readline()
+    ver = child.read(66)
+    print('Host:\t  {0}Hostname: {1}{2}'.format(addr, hostname.decode('utf-8'), ver.decode('utf-8')))
+    print('\n') # Newline to separate from next router
     if child.isalive():
         child.close()
 
@@ -226,7 +272,7 @@ def sigintHandler(signum, frame):
 # Initialize CTRL+C interrupt handler
 signal.signal(signal.SIGINT, sigintHandler)
 
-f = open('routers', 'rb') # Open file of routers for reading
+f = open('routers', 'r') # Open file of routers for reading
 
 menu() # Begin menu loop
 

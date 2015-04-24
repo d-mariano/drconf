@@ -1,0 +1,15 @@
+########################################################################
+##  Author:  Dave Mariano   
+#
+#   Enter router IP addresses in this file.  IP addresses must be 
+#   separated with a newline.  Samples exist below.
+#
+#   Lines beginning with '#' are ignored, as are newlines.
+#
+#   If there are any issues, go to my github at github.com/d-mariano 
+#   and notify me.
+##
+####################################################################
+
+10.0.1.1
+10.0.1.2

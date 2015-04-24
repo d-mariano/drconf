@@ -107,17 +107,19 @@ def seekRouters(choice):
             elif addr == '':
                 break    
             # Manual input required for each IP address in file
-            print('Enter login information for router', line)
+            print('Enter login information for router', addr)
             user, pw, sec= setLoginInfo()
     
             # Make the connection
             child = connect(addr, user, pw, sec)
             # Verify a successful connection
-            if child == -1:  
+            if child != -1:  
                 if choice == '1':
                     # New secret must inputted for secret change
                     new = newSecret()
                     secretChange(new, child)
+                    if raw_input('Continue to next router? (default=continue, n=cancel)').lower == 'n':
+                        break
                 elif choice == '2':
                     healthCheck(child)    
                 elif choice == '3':
@@ -125,7 +127,7 @@ def seekRouters(choice):
             addr = f.readline()
     
     f.seek(0, 0) # Reset position of pointer to the beginning of the file
-
+    print('End of routers...')
 
 # Sets and returns login information specified by the user
 def setLoginInfo():

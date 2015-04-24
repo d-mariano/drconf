@@ -69,7 +69,7 @@ def seekRouters(choice):
     automated = raw_input('Which mode would you like to use?  ( default=automated, m=manual )   ')
     
     # Read the first line of the file
-    addr = f.readline()
+    addr = f.readline().decode('utf-8')
     
     # Automated PW change for each router, requires only one PW input
     # and applies it to all IP's in file
@@ -98,7 +98,7 @@ def seekRouters(choice):
                     healthCheck(child)    
                 elif choice == '3':
                     systemAudit(addr, child)
-            addr = f.readline()    
+            addr = f.readline().decode('utf-8')
     else:
         print('Entering manual mode.\n')
         while 1:
@@ -124,10 +124,10 @@ def seekRouters(choice):
                     healthCheck(child)    
                 elif choice == '3':
                     systemAudit(addr, child)
-            addr = f.readline()
+            addr = f.readline().decode('utf-8')
     
     f.seek(0, 0) # Reset position of pointer to the beginning of the file
-    print('End of routers...')
+    print('\nEnd of routers...')
 
 # Sets and returns login information specified by the user
 def setLoginInfo():
@@ -274,7 +274,7 @@ def sigintHandler(signum, frame):
 # Initialize CTRL+C interrupt handler
 signal.signal(signal.SIGINT, sigintHandler)
 
-f = open('routers', 'r') # Open file of routers for reading
+f = open('routers', 'rb') # Open file of routers for reading
 
 menu() # Begin menu loop
 

@@ -16,6 +16,7 @@
 # Allows for Python 2.x to use the 3.x print function 
 from __future__ import print_function
 import getpass
+import os
 import sys
 import signal
 
@@ -73,58 +74,61 @@ def seekRouters(choice):
     
     # Automated PW change for each router, requires only one PW input
     # and applies it to all IP's in file
-    if(automated.lower() != 'm'):
+    if automated.lower() != 'm':
+        print('Entering automated mode.\n')
         print('Enter login informaton to be used for all routers.')
-        user, pw, sec= setLoginInfo()
+        user, pw, sec = setLoginInfo()
         # New secret must be obtained for password change 
-        if(choice == '1'):
+        if choice == '1':
             new = newSecret()
         print ('\n')
-        
-        while 1:
-            if addr == "\n":
-                continue
-            if addr == "":
-                break
-            # Make the connection to router at IP addr
-            child = connect(addr, user, pw, sec)
-            # Verify a successful connection has been made to this router
-            if child != -1:  
-                # The operation executed after the remote connection to the
-                # router has been made is dependent on the users' choice
-                if choice == '1':
-                    secretChange(new, child)
-                elif choice == '2':
-                    healthCheck(child)    
-                elif choice == '3':
-                    systemAudit(addr, child)
-            addr = f.readline().decode('utf-8')
     else:
         print('Entering manual mode.\n')
-        while 1:
-            if addr == '\n':
-                continue
-            elif addr == '':
-                break    
-            # Manual input required for each IP address in file
-            print('Enter login information for router', addr)
-            user, pw, sec= setLoginInfo()
     
-            # Make the connection
-            child = connect(addr, user, pw, sec)
-            # Verify a successful connection
-            if child != -1:  
-                if choice == '1':
-                    # New secret must inputted for secret change
-                    new = newSecret()
-                    secretChange(new, child)
-                    if raw_input('Continue to next router? (default=continue, n=cancel)').lower == 'n':
-                        break
-                elif choice == '2':
-                    healthCheck(child)    
-                elif choice == '3':
-                    systemAudit(addr, child)
+        
+    while 1:
+        if addr == "\n" or addr.startswith('#'):
             addr = f.readline().decode('utf-8')
+            if addr == '':
+                break
+            continue
+        # Input must be made each time for manual mode
+        if automated.lower() == 'm':   
+            print('\nEnter login information for router', addr)
+            user, pw, sec = setLoginInfo()
+                
+        # Make the connection to router at IP addr
+        child = connect(addr, user, pw, sec)
+        # Verify a successful connection has been made to this router
+        if child != -1:  
+            # The operation executed after the remote connection to the
+            # router has been made is dependent on the users' choice
+            if choice == '1':
+                # A new secret must be inputted for each router in manual mode
+                if automated == 'm':
+                    new = newSecret()
+                secretChange(new, child)
+            elif choice == '2':
+                healthCheck(child)    
+            elif choice == '3':
+                systemAudit(addr, child)
+
+        addr = f.readline().decode('utf-8') # Check for end of file
+
+        if addr == '': # Make sure the next address is not blank
+            break
+        
+        # Manual Skip, Continue, or Cancel
+        if automated.lower() == 'm':
+            ans = raw_input('Next router is ' + addr + '\nContinue to next router? (default=continue, s=skip, n=cancel)   ')
+            if ans.lower() == 's':
+                print('\nSkipping router', addr)
+                # Must read next line if a skip is to be made
+                addr = f.readline().decode('utf-8') # Check for end of file
+                if addr == '':
+                    break
+            elif ans.lower() == 'n':
+                break
     
     f.seek(0, 0) # Reset position of pointer to the beginning of the file
     print('\nEnd of routers...')
@@ -274,9 +278,32 @@ def sigintHandler(signum, frame):
 # Initialize CTRL+C interrupt handler
 signal.signal(signal.SIGINT, sigintHandler)
 
+# Make sure the file 'routers' exists, create it and exit if does not
+if os.access('routers', os.F_OK) is False:
+    print('\nThe file \'routers\' does not exist, but will be created.\n')
+    f = open('routers', 'w')
+    print('\nIt must now be populated with router IP addresses.\n')
+    print('Each router IP must be separated with a new line.\n')
+    print('Now exiting.\n\n')
+    f.close()
+    exit()
+
+# Check stats of file for file size
+finfo = os.stat('routers')
+
+# Make sure the size of 'routers' is not 0
+if finfo.st_size == 0:
+    print('\nThe file\'routers\' is 0 bytes long.\n')
+    print('The file must be populated with IP addresses of routers.\n')
+    print('Each router IP must be separted with a new line.\n')
+    print('Now exiting.\n\n')
+    exit()
+
 f = open('routers', 'rb') # Open file of routers for reading
 
 menu() # Begin menu loop
 
 f.close() 
-    
+
+exit()
+

@@ -15,12 +15,12 @@
 '''
 # Allows for Python 2.x to use the 3.x print function 
 from __future__ import print_function
+
 import getpass
 import os
 import sys
 import signal
 
-# Check for pexepct
 try:
     import pexpect
 except ImportError:
@@ -41,7 +41,7 @@ except NameError:
 # A choice is provided by the user and passed to the seekRouters function
 # to determine what to do when the routers are connected to remotely.
 def menu():
-    print(  '#############  Menu  #####################\n'
+    print(  '\n#############  Menu  #####################\n'
             '1.\tCisco Secret Change\n'
             '2.\tHealth Check\n'
             '3.\tSystem Audit\n'
@@ -159,6 +159,7 @@ def newSecret():
 # opened by pexpect.
 def connect(addr, user, pw, sec):
     print("\nAttempting to connect to router" ,addr)
+    
     # Make ssh process using the current router address
     try:
         child = pexpect.spawn('ssh %s@%s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' % (user,addr))
@@ -195,7 +196,8 @@ def connect(addr, user, pw, sec):
         if child.isalive():
             child.close()
         return -1
-    # Return the remote login process
+    
+    # Return login process for router operation
     return child
 
 
@@ -209,7 +211,7 @@ def secretChange(new, child):
     child.sendline('enable secret %s' % new)
     child.expect('#')
     print('Password changed successfully.\n\n')
-    # Work is done, close the child
+    # Work is done, child no longer needed
     if child.isalive():
         child.close()
 
@@ -267,43 +269,41 @@ def systemAudit(addr, child):
         child.close()
 
 
-# Handler for keyboard interrupt
 def sigintHandler(signum, frame):
     print('\n')
     f.close()
     sys.exit(1)
 
 
+if __name__ == "__main__":
+    # Initialize CTRL+C interrupt handler
+    signal.signal(signal.SIGINT, sigintHandler)
 
-# Initialize CTRL+C interrupt handler
-signal.signal(signal.SIGINT, sigintHandler)
+    # File 'routers' must exist for the program to work
+    if os.access('routers', os.F_OK) is False:
+        print('\nThe file \'routers\' does not exist, but will be created.\n')
+        f = open('routers', 'w')
+        print('\nIt must now be populated with router IP addresses.\n')
+        print('Each router IP must be separated with a new line.\n')
+        print('Now exiting.\n\n')
+        f.close()
+        exit()
 
-# Make sure the file 'routers' exists, create it and exit if does not
-if os.access('routers', os.F_OK) is False:
-    print('\nThe file \'routers\' does not exist, but will be created.\n')
-    f = open('routers', 'w')
-    print('\nIt must now be populated with router IP addresses.\n')
-    print('Each router IP must be separated with a new line.\n')
-    print('Now exiting.\n\n')
-    f.close()
+    # There is no point to run if no routers are specified, so
+    # file size must be tested
+    finfo = os.stat('routers')
+    if finfo.st_size == 0:
+        print('\nThe file\'routers\' is 0 bytes long.\n')
+        print('The file must be populated with IP addresses of routers.\n')
+        print('Each router IP must be separted with a new line.\n')
+        print('Now exiting.\n\n')
+        exit()
+
+    f = open('routers', 'rb') 
+
+    menu() 
+
+    f.close() 
+
     exit()
-
-# Check stats of file for file size
-finfo = os.stat('routers')
-
-# Make sure the size of 'routers' is not 0
-if finfo.st_size == 0:
-    print('\nThe file\'routers\' is 0 bytes long.\n')
-    print('The file must be populated with IP addresses of routers.\n')
-    print('Each router IP must be separted with a new line.\n')
-    print('Now exiting.\n\n')
-    exit()
-
-f = open('routers', 'rb') # Open file of routers for reading
-
-menu() # Begin menu loop
-
-f.close() 
-
-exit()
 

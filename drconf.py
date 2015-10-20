@@ -47,22 +47,27 @@ def menu():
             '3.\tSystem Audit\n'
             '4.\tQuit\n')
     choice = raw_input('Enter the number of your task: ')
+
     print('\n')
     if choice == '1':       # Cisco Secret Change
-        seekRouters(choice) 
+        print('\n#############  Secret Change  #####################\n')
+        seekRouters(choice)
     elif choice == '2':     # Health Check
+        print('\n#############  Health Check  #####################\n')
         seekRouters(choice)
     elif choice == '3':     # System Audit
+        print('\n#############  System Audit  #####################\n')
         seekRouters(choice)
     elif choice == '4':     # Quit
         return
     else:
         print(choice, 'is not an option.')
+        
     print('\n')
-    menu() # Run the menu again after operation
+    menu()     
 
 
-## Cisco Secret Change
+## Seek Routers
 # Gives the user a choice of changing the secret of each Cisco 
 # router manually with different information or all at once 
 # with the same information.

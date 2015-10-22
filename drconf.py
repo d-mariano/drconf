@@ -18,6 +18,7 @@ from __future__ import print_function
 
 import getpass
 import os
+import string
 import sys
 import signal
 
@@ -263,12 +264,26 @@ def systemAudit(addr, child):
     child.sendline('show run | include hostname')
     child.expect('hostname ')
     hostname = child.readline()
+    child.expect('#')
     
     # Show Version, first line
-    child.sendline('show version')
-    ver = child.readline()
-    ver = child.read(66)
-    print('Host:\t  {0}Hostname: {1}{2}'.format(addr, hostname.decode('utf-8'), ver.decode('utf-8')))
+    child.sendline('show version | include (version|Version)')
+    child.expect('\n')
+    child.expect('\w+#')
+    ver = child.before
+
+
+    print('Host:\t  {0}Hostname: {1}\n{2}'.format(addr, hostname.decode('utf-8'), ver.decode('utf-8')))
+    print('\n')
+
+    # Show Inventory
+    child.sendline('show inventory')  
+    child.expect('\n')  
+    child.expect('\w+#')
+    inv = child.before
+     
+    print('Inventory:\n{0}'.format(inv.decode('utf-8')))
+
     print('\n') # Newline to separate from next router
     if child.isalive():
         child.close()
